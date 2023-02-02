@@ -4,17 +4,21 @@ from aiogram.utils import executor
 
 import os
 
+import markups
+
 bot = Bot(token=os.getenv('TOKEN'))
 dp = Dispatcher(bot)
 
 
 @dp.message_handler(commands=['start'])
 async def process_start_command(message: types.Message):
-    await message.reply("Привет!\nНапиши мне что-нибудь!")
+    await message.answer("Привет!\nНапиши мне что-нибудь!")
+
 
 @dp.message_handler(commands=['commands'])
 async def process_start_command(message: types.Message):
-    await message.reply(f"Привет!\nНапиши мне 😘😘😘😘что-нибудь!")
+    await message.answer(f"Привет!\nНапиши мне 😘😘😘😘что-нибудь!")
+
 
 @dp.message_handler()
 async def echo_message(msg: types.Message):
