@@ -3,8 +3,13 @@ from aiogram import executor, types
 from aiogram.dispatcher import FSMContext
 from loader import bot, dp, google_auth, drive
 
+from aiogram.types import InputFile
+
 from FSM import FileState
 from constants import CLIENT_SECRET_FILE, API_NAME, API_VERSION, SCOPES
+import os
+import io
+from googleapiclient.http import MediaIoBaseDownload
 
 service = Create_Service(CLIENT_SECRET_FILE, API_NAME, API_VERSION, SCOPES)
 
@@ -85,8 +90,37 @@ async def file_delete(message: types.Message, state: FSMContext):
 
 @dp.message_handler(commands="download", state=None)  # функція завантаження, (функціонал у розробці)
 async def download_file(message: types.Message):
-    await message.answer(f"Введите id папки которую хотите скачать:")
+    await message.answer(f"Введіть назву файлу, яку бажаете завантажити:")
     await FileState.fsm_download.set()
+
+
+@dp.message_handler(state=FileState.fsm_download)
+async def download_file(message: types.Message, state: FSMContext):
+    file_name = message.text
+    file_id = search_file_name(file_name)
+
+    request = service.files().get_media(fileId=file_id)
+    fh = io.BytesIO()
+    downloader = MediaIoBaseDownload(fd=fh, request=request)
+
+    done = False
+
+    while not done:
+        status, done = downloader.next_chunk()
+        await message.answer(f'Download progress{0}'.format(status.progress() * 100))
+    fh.seek(0)
+    with open(os.path.join('D:/', file_name), 'wb') as f:
+        f.write(fh.read())
+        f.close()
+
+    photo = InputFile(f"D:/{file_name}")
+    await bot.send_photo(chat_id=message.chat.id, photo=photo)
+
+    #await message.reply_document(open(os.path.join('D:/', file_name), 'rb'))
+    await message.answer(f"Файл завантажен.")
+    path = os.path.join('D:/', file_name)
+    os.remove(path)
+    await state.finish()
 
 
 @dp.message_handler(commands="info", state=None)  # функція завантаження, (функціонал у розробці)

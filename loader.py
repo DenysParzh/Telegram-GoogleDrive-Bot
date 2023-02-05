@@ -16,7 +16,8 @@ google_auth.LoadCredentialsFile("mycreds.txt")
 if google_auth.credentials is None:
     google_auth.LocalWebserverAuth()
 elif google_auth.access_token_expired:
-    google_auth.Refresh()
+    #google_auth.Refresh()
+    print("")
 else:
     google_auth.Authorize()
 google_auth.SaveCredentialsFile("mycreds.txt")
