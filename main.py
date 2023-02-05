@@ -5,9 +5,11 @@ from loader import bot, dp, google_auth, drive
 
 from FSM import FileState
 from constants import CLIENT_SECRET_FILE, API_NAME, API_VERSION, SCOPES
+
 import os
 import io
 from googleapiclient.http import MediaIoBaseDownload, MediaFileUpload
+
 
 service = Create_Service(CLIENT_SECRET_FILE, API_NAME, API_VERSION, SCOPES)
 
@@ -48,6 +50,16 @@ def search_file_name_in_subfolders(file_name):
             return list_files['id']
 
     return root_lists[0]['id']  # Обробити виключення: якщо файл не знайдено
+
+
+def search_file_id(file_name):
+    try:
+
+        result_file = service.files().list(q=f"name='{file_name}'").execute()
+        return result_file["files"][0]["id"]
+
+    except Exception as error:
+        print(error)
 
 
 # ------------------------------------------------------------------------------------------------------------------
@@ -102,7 +114,8 @@ async def create_folder(message: types.Message, state: FSMContext):
     file_metadata = {
         'name': name_folder,  # назва папки (вводится через телеграм)
         'mimeType': 'application/vnd.google-apps.folder',
-        'parents': [search_file_name_in_root(name_path_to_save_folder) if name_path_to_save_folder != 'root' else 'root']
+        'parents': [
+            search_file_name_in_root(name_path_to_save_folder) if name_path_to_save_folder != 'root' else 'root']
     }
     service.files().create(body=file_metadata).execute()  # створення нової пустої папки
     await message.answer(f"Папка успішно створена.")
@@ -176,6 +189,10 @@ async def download_file(message: types.Message, state: FSMContext):
         gd_folder_path = "root"
 
     fileList = drive.ListFile({'q': f"'{gd_folder_path}' in parents and trashed=false"}).GetList()
+
+    # listGoogleFiles = test_search_file(gd_folder_name)
+    # pp.pprint(listGoogleFiles)
+
     for file in fileList:
         await message.answer('Title: %s,\nID: %s' % (file['title'], file['id']))
         # Get the folder ID that you want
@@ -183,7 +200,6 @@ async def download_file(message: types.Message, state: FSMContext):
 
 
 # ------------------------------------------------------------------------------------------------------------------
-
 
 if __name__ == '__main__':
     executor.start_polling(dp, skip_updates=True)
