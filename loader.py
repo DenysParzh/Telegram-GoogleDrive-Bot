@@ -1,6 +1,7 @@
-from aiogram import Bot
-from aiogram.dispatcher import Dispatcher
-from aiogram.contrib.fsm_storage.memory import MemoryStorage
+from aiogram import Bot, Dispatcher
+
+# from aiogram.contrib.fsm_storage.memory import MemoryStorage
+from aiogram.fsm.storage.memory import MemoryStorage
 
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
@@ -8,7 +9,7 @@ import os
 
 storage = MemoryStorage()
 bot = Bot(token=os.getenv('TOKEN'))
-dp = Dispatcher(bot, storage=storage)
+dp = Dispatcher(storage=storage)
 
 google_auth = GoogleAuth()
 
