@@ -4,7 +4,7 @@ import os
 import typing
 
 from aiogram import types, F
-from aiogram.filters import Command
+from aiogram.filters import Command, state
 from aiogram.fsm.context import FSMContext
 from googleapiclient.http import MediaFileUpload
 
@@ -12,6 +12,8 @@ from FSM import FileState
 from Google import Create_Service
 from constants import CLIENT_SECRET_FILE, API_NAME, API_VERSION, SCOPES
 from loader import bot, dp, google_auth, drive
+
+from google.auth.transport import requests
 
 service = Create_Service(CLIENT_SECRET_FILE, API_NAME, API_VERSION, SCOPES)
 logging.basicConfig(level=logging.INFO)
@@ -36,73 +38,72 @@ async def user_login(message: types.Message) -> None:
 
 
 # # ------------------------------------------------------------------------------------------------------------------
-#
-# def search_file_id(file_name):
-#     try:
-#
-#         result_file = service.files().list(q=f"name='{file_name}'").execute()
-#         return result_file["files"][0]["id"]
-#
-#     except Exception as error:
-#         print(error)
-#
-#
-# # ------------------------------------------------------------------------------------------------------------------
 
+def search_file_id(file_name):
+    try:
+
+        result_file = service.files().list(q=f"name='{file_name}'").execute()
+        return result_file["files"][0]["id"]
+
+    except Exception as error:
+        print(error)
+
+
+def search_file(file_name):
+    path = 'D:/'
+    for rootdir, dirs, files in os.walk(path):
+        for file in files:
+            if (file == file_name):
+                path = os.path.join(rootdir, file)
+                return path
+
+    path = 'C:/'
+    for rootdir, dirs, files in os.walk(path):
+        for file in files:
+            if (file == file_name):
+                path = os.path.join(rootdir, file)
+                return path
+
+# # ------------------------------------------------------------------------------------------------------------------
 
 @dp.message(Command(commands='add_file'))
 async def add_file_message(message: types.Message, state: FSMContext):
-    await message.answer("Надішліть файл для завантаженна на Google drive:")
+    # await message.answer("Надішліть файл для завантаженна на Google drive:")
+    await message.answer("Введіть назву папки в яку ви хочете завантажити файл:")
     await state.set_state(FileState.fsm_add)
 
 
-@dp.message(FileState.fsm_add, F.document)
-async def add_file(message: types.Message):
+@dp.message(FileState.fsm_add)
+async def add_file_name(message: types.Message, state: FSMContext):
+    # await message.answer("Введіть назву папки в яку ви хочете завантажити файл:")
 
-    file_id = message.document.file_id
-    file = await bot.get_file(file_id)
-    abs_telfile_path = f"https://api.telegram.org/file/bot{os.getenv('TOKEN')}/{file.file_path}"
-
-    buffer_file_name = "downloaded"
-    if not os.path.exists(buffer_file_name):
-        os.mkdir(buffer_file_name)
-    dirname = os.path.abspath(buffer_file_name)
+    file_id = search_file_id(message.text)
+    await state.update_data(file_id=file_id)
+    # await message.answer(file_id)
+    await message.answer("Надішліть файл для завантаженна на Google drive:")
+    await state.set_state(FileState.fsm_add_name_file)
 
 
-    #dirname = os.path.dirname(buffer_file_name)
-    #file_name = message.document.file_name
-    #abs_path = buffer_file_name + file_name
+@dp.message(FileState.fsm_add_name_file, F.document)
+async def add_file(message: types.Message, state: FSMContext):
 
-    await bot.download_file(abs_telfile_path, dirname)
-    await message.answer(dirname)
+    data = await state.get_data()
+    folder_id = data['file_id']
+    # await message.answer(folder_id)
+    file_name = message.document.file_name
+    path = search_file(file_name)
 
+    # await message.answer(path)
+    filepath = path.replace('\\', '/')
+    # folder_id = name_folder
+    file_name = message.document.file_name
     # await message.answer(file_name)
-    # file_path = 'D:/' + file_name
-
-
-
-    #file_id = message.document.file_id
-    #file = await bot.get_file(file_id)
-    #mime_type = message.document.mime_type
-    # pa =await bot.download(doc)
-    # path = os.path.abspath(doc)
-    # await message.answer(doc)
-    # await message.answer(file_name)
-    # await message.answer(message.document.json())
-
-    # file = bot.get_file(message.document.file_id)
-    # await message.answer(str(file_info))
-
-    # file_metadata = {
-    #     'name': f"{file_name}"
-    #     # 'parent': root
-    # }
-
-    # media = MediaFileUpload("downloaded/" + file.file_path, mimetype=mime_type)
-    # service.files().create(body=file_metadata, media_body=media, fields='id').execute()
-
-    # os.remove(file_path)
-    # await state.clear()
+    file_metadata = {
+        'name': file_name,
+        'parents': ['root' if folder_id is None else folder_id]
+    }
+    media = MediaFileUpload(filepath, resumable=True)
+    r = service.files().create(body=file_metadata, media_body=media, fields='id').execute()
 
 
 # # ------------------------------------------------------------------------------------------------------------------
