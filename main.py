@@ -49,12 +49,12 @@ def search_file_id(file_name):
 
 async def upload_file(file_name, mimeType, folder_id, file_id):
     abs_path = f"{CACHE_FOLDER_NAME}\\{file_name}"
-    await bot.download(file_id, abs_path)
     file_metadata = {
         'name': f"{file_name}",
         'parents': ['root' if folder_id is None else folder_id]
     }
 
+    await bot.download(file_id, abs_path)
     media = MediaFileUpload(abs_path, mimetype=mimeType)
     service.files().create(body=file_metadata, media_body=media, fields='id').execute()
 
@@ -74,7 +74,7 @@ async def upload_message(message: types.Message, state: FSMContext):
 async def upload_folder_name(message: types.Message, state: FSMContext):
     folder_id = search_file_id(message.text)
     await state.update_data(folder_id=folder_id)
-    await message.answer("⬇️ Надішліть один файл для завантаження ⬇️")
+    await message.answer("⬇️ Надішліть файл/файли для завантаження ⬇️")
     await state.set_state(FileState.fsm_upload)
 
 
@@ -100,7 +100,7 @@ async def upload_photo(message: types.Message, state: FSMContext):
     photo_id = message.photo[-1].file_id
     photo_info = await bot.get_file(photo_id)
     photo_name = photo_info.file_path.split('/')[-1]
-    mime_type = 'image/jpeg'
+    mime_type = f'image/{photo_name.split(".")[-1]}'
 
     await upload_file(photo_name, mime_type, folder_id, photo_id)
 
@@ -112,13 +112,13 @@ async def upload_video(message: types.Message, state: FSMContext):
 
     video_name = message.video.file_name
     mime_type = message.video.mime_type
-    video_id = message.video.file_id  # Get file id
+    video_id = message.video.file_id
 
     await upload_file(video_name, mime_type, folder_id, video_id)
 
 
 @dp.message(FileState.fsm_upload, F.voice)
-async def upload_video(message: types.Message, state: FSMContext):
+async def upload_voice(message: types.Message, state: FSMContext):
     data = await state.get_data()
     folder_id = data["folder_id"]
 
@@ -133,15 +133,28 @@ async def upload_video(message: types.Message, state: FSMContext):
 
 
 @dp.message(FileState.fsm_upload, F.audio)
-async def upload_video(message: types.Message, state: FSMContext):
+async def upload_audio(message: types.Message, state: FSMContext):
     data = await state.get_data()
     folder_id = data["folder_id"]
 
     audio_name = message.audio.file_name
     mime_type = message.audio.mime_type
-    audio_id = message.audio.file_id  # Get file id
+    audio_id = message.audio.file_id
 
     await upload_file(audio_name, mime_type, folder_id, audio_id)
+
+
+@dp.message(FileState.fsm_upload, F.video_note)
+async def upload_video_node(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    folder_id = data["folder_id"]
+
+    video_note_id = message.video_note.file_id
+    video_note_info = await bot.get_file(video_note_id)
+    video_note_name = video_note_info.file_path.split('/')[-1]
+    mime_type = "video/mp4"
+
+    await upload_file(video_note_name, mime_type, folder_id, video_note_id)
 
 
 # ------------------------------------------------------------------------------------------------------------------
@@ -223,7 +236,7 @@ async def upload_video(message: types.Message, state: FSMContext):
 #         f.write(fh.read())
 #         f.close()
 #
-#     await message.reply_document(open(os.path.join('D:/', file_name), 'rb'))
+#     await message.reply_document(open(os.path.join('D:/'+ file_name), 'rb'))
 #     await message.answer(f"Файл завантажен.")
 #     path = os.path.join('D:/', file_name)
 #     os.remove(path)
@@ -253,7 +266,6 @@ async def main():
     try:
         await bot.delete_webhook(drop_pending_updates=True)
         await dp.start_polling(bot)
-
     finally:
         await bot.session.close()
 
