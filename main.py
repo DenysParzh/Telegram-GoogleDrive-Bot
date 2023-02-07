@@ -47,6 +47,21 @@ def search_file_id(file_name):
         print(error)
 
 
+async def upload_file(file_name, mimeType, folder_id, file_id):
+    abs_path = f"{CACHE_FOLDER_NAME}\\{file_name}"
+    await bot.download(file_id, abs_path)
+    file_metadata = {
+        'name': f"{file_name}",
+        'parents': ['root' if folder_id is None else folder_id]
+    }
+
+    media = MediaFileUpload(abs_path, mimetype=mimeType)
+    service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+
+    media.__del__()
+    os.remove(abs_path)
+
+
 # # ------------------------------------------------------------------------------------------------------------------
 
 @dp.message(Command(commands='upload'))
@@ -65,43 +80,71 @@ async def upload_folder_name(message: types.Message, state: FSMContext):
 
 @dp.message(FileState.fsm_upload, F.document)
 async def upload_document(message: types.Message, state: FSMContext):
-    data = await state.get_data()
-    folder_id = data["folder_id"]
-
     if not os.path.exists(CACHE_FOLDER_NAME):
         os.mkdir(CACHE_FOLDER_NAME)
 
+    data = await state.get_data()
+    folder_id = data["folder_id"]
+
     file_name = message.document.file_name
     file_id = message.document.file_id
-    file = await bot.get_file(file_id)
-    abs_path = f"{CACHE_FOLDER_NAME}\\{file_name}"
-
-    await bot.download_file(file.file_path, abs_path)
-
     mime_type = message.document.mime_type
-    file_metadata = {
-        'name': f"{file_name}",
-        'parents': ['root' if folder_id is None else folder_id]
-    }
-
-    media = MediaFileUpload(abs_path, mimetype=mime_type)
-    service.files().create(body=file_metadata, media_body=media, fields='id').execute()
-
-    media.__del__()
-    os.remove(abs_path)
+    await upload_file(file_name, mime_type, folder_id, file_id)
 
 
 @dp.message(FileState.fsm_upload, F.photo)
-async def upload_photo(message: types.Message):
+async def upload_photo(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    folder_id = data["folder_id"]
+
     photo_id = message.photo[-1].file_id
     photo_info = await bot.get_file(photo_id)
     photo_name = photo_info.file_path.split('/')[-1]
-    abs_path = f"{CACHE_FOLDER_NAME}\\{photo_name}"
+    mime_type = 'image/jpeg'
 
-    await bot.download(photo_id, destination=abs_path)
+    await upload_file(photo_name, mime_type, folder_id, photo_id)
 
 
-# # ------------------------------------------------------------------------------------------------------------------
+@dp.message(FileState.fsm_upload, F.video)
+async def upload_video(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    folder_id = data["folder_id"]
+
+    video_name = message.video.file_name
+    mime_type = message.video.mime_type
+    video_id = message.video.file_id  # Get file id
+
+    await upload_file(video_name, mime_type, folder_id, video_id)
+
+
+@dp.message(FileState.fsm_upload, F.voice)
+async def upload_video(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    folder_id = data["folder_id"]
+
+    voice_id = message.voice.file_id
+    voice_info = await bot.get_file(voice_id)
+    voice_name = voice_info.file_path.split('/')[-1]
+
+    voice_id = message.voice.file_id
+    mime_type = message.voice.mime_type
+
+    await upload_file(voice_name, mime_type, folder_id, voice_id)
+
+
+@dp.message(FileState.fsm_upload, F.audio)
+async def upload_video(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    folder_id = data["folder_id"]
+
+    audio_name = message.audio.file_name
+    mime_type = message.audio.mime_type
+    audio_id = message.audio.file_id  # Get file id
+
+    await upload_file(audio_name, mime_type, folder_id, audio_id)
+
+
+# ------------------------------------------------------------------------------------------------------------------
 # @dp.message(commands="create_folder", state=None)  # функція створення папки
 # async def process_create_folder(message: types.Message):
 #     await message.answer(f"Введіть назву папки:")
