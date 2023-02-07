@@ -1,19 +1,16 @@
 import asyncio
 import logging
 import os
-import typing
 
 from aiogram import types, F
-from aiogram.filters import Command, state
+from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from googleapiclient.http import MediaFileUpload
 
 from FSM import FileState
 from Google import Create_Service
-from constants import CLIENT_SECRET_FILE, API_NAME, API_VERSION, SCOPES
-from loader import bot, dp, google_auth, drive
-
-from google.auth.transport import requests
+from constants import CLIENT_SECRET_FILE, API_NAME, API_VERSION, SCOPES, CACHE_FOLDER_NAME
+from loader import bot, dp, google_auth
 
 service = Create_Service(CLIENT_SECRET_FILE, API_NAME, API_VERSION, SCOPES)
 logging.basicConfig(level=logging.INFO)
@@ -30,6 +27,7 @@ async def process_start_command(message: types.Message):
 @dp.message(Command(commands='login'))
 async def user_login(message: types.Message) -> None:
     try:
+
         google_auth.LocalWebserverAuth()
 
         await message.answer("Вы залогинились")
@@ -49,61 +47,58 @@ def search_file_id(file_name):
         print(error)
 
 
-def search_file(file_name):
-    path = 'D:/'
-    for rootdir, dirs, files in os.walk(path):
-        for file in files:
-            if (file == file_name):
-                path = os.path.join(rootdir, file)
-                return path
-
-    path = 'C:/'
-    for rootdir, dirs, files in os.walk(path):
-        for file in files:
-            if (file == file_name):
-                path = os.path.join(rootdir, file)
-                return path
-
 # # ------------------------------------------------------------------------------------------------------------------
 
-@dp.message(Command(commands='add_file'))
-async def add_file_message(message: types.Message, state: FSMContext):
-    # await message.answer("Надішліть файл для завантаженна на Google drive:")
-    await message.answer("Введіть назву папки в яку ви хочете завантажити файл:")
-    await state.set_state(FileState.fsm_add)
+@dp.message(Command(commands='upload'))
+async def upload_message(message: types.Message, state: FSMContext):
+    await message.answer("⬇️ Введіть назву папки на Google Drive ⬇️")
+    await state.set_state(FileState.fsm_upload_folder_name)
 
 
-@dp.message(FileState.fsm_add)
-async def add_file_name(message: types.Message, state: FSMContext):
-    # await message.answer("Введіть назву папки в яку ви хочете завантажити файл:")
-
-    file_id = search_file_id(message.text)
-    await state.update_data(file_id=file_id)
-    # await message.answer(file_id)
-    await message.answer("Надішліть файл для завантаженна на Google drive:")
-    await state.set_state(FileState.fsm_add_name_file)
+@dp.message(FileState.fsm_upload_folder_name)
+async def upload_folder_name(message: types.Message, state: FSMContext):
+    folder_id = search_file_id(message.text)
+    await state.update_data(folder_id=folder_id)
+    await message.answer("⬇️ Надішліть один файл для завантаження ⬇️")
+    await state.set_state(FileState.fsm_upload)
 
 
-@dp.message(FileState.fsm_add_name_file, F.document)
-async def add_file(message: types.Message, state: FSMContext):
-
+@dp.message(FileState.fsm_upload, F.document)
+async def upload_document(message: types.Message, state: FSMContext):
     data = await state.get_data()
-    folder_id = data['file_id']
-    # await message.answer(folder_id)
-    file_name = message.document.file_name
-    path = search_file(file_name)
+    folder_id = data["folder_id"]
 
-    # await message.answer(path)
-    filepath = path.replace('\\', '/')
-    # folder_id = name_folder
+    if not os.path.exists(CACHE_FOLDER_NAME):
+        os.mkdir(CACHE_FOLDER_NAME)
+
     file_name = message.document.file_name
-    # await message.answer(file_name)
+    file_id = message.document.file_id
+    file = await bot.get_file(file_id)
+    abs_path = f"{CACHE_FOLDER_NAME}\\{file_name}"
+
+    await bot.download_file(file.file_path, abs_path)
+
+    mime_type = message.document.mime_type
     file_metadata = {
-        'name': file_name,
+        'name': f"{file_name}",
         'parents': ['root' if folder_id is None else folder_id]
     }
-    media = MediaFileUpload(filepath, resumable=True)
-    r = service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+
+    media = MediaFileUpload(abs_path, mimetype=mime_type)
+    service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+
+    media.__del__()
+    os.remove(abs_path)
+
+
+@dp.message(FileState.fsm_upload, F.photo)
+async def upload_photo(message: types.Message):
+    photo_id = message.photo[-1].file_id
+    photo_info = await bot.get_file(photo_id)
+    photo_name = photo_info.file_path.split('/')[-1]
+    abs_path = f"{CACHE_FOLDER_NAME}\\{photo_name}"
+
+    await bot.download(photo_id, destination=abs_path)
 
 
 # # ------------------------------------------------------------------------------------------------------------------
@@ -211,15 +206,7 @@ async def add_file(message: types.Message, state: FSMContext):
 
 # ------------------------------------------------------------------------------------------------------------------
 
-# if __name__ == '__main__':
-#     #executor.start_polling(dp, skip_updates=True)
-#     #main()
-#     dp.start_polling(dp, skip_updates=True)
-
-
 async def main():
-    # dp.message.register(process_start_command) # старт
-    # dp.message.register(user_login)  # логін
     try:
         await bot.delete_webhook(drop_pending_updates=True)
         await dp.start_polling(bot)
