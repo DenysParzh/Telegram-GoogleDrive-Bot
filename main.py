@@ -2,12 +2,12 @@ import asyncio
 import logging
 import os
 import io
+
 from aiogram import types, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
-
-from aiogram.types import InputFile
+from aiogram.types import FSInputFile
 
 from FSM import FileState
 from Google import Create_Service
@@ -172,10 +172,9 @@ async def upload_audio(message: types.Message, state: FSMContext):
     await upload_file(animation_name, mime_type, folder_id, animation_id)
 
 
-@dp.message(FileState.fsm_upload, F.text)
+@dp.message(Command(commands='stop'))
 async def upload_video_node(message: types.Message, state: FSMContext):
-    if message.text == 'stop':
-        await state.clear()
+    await state.clear()
 
 
 # ------------------------------------------------------------------------------------------------------------------
@@ -200,21 +199,20 @@ async def create_folder(message: types.Message, state: FSMContext):
     try:
 
         folder_name = message.text
-        if folder_name != 'stop':
-            data = await state.get_data()
 
-            file_id = search_file_id(data["folder_choice_name"])
+        data = await state.get_data()
 
-            file_metadata = {
-                'name': folder_name,  # назва папки (вводится через телеграм)
-                'mimeType': 'application/vnd.google-apps.folder',
-                'parents': ['root' if file_id is None else file_id]
-            }
-            service.files().create(body=file_metadata).execute()  # створення нової пустої папки
-            await message.answer(
-                f"Папка успішно створена. Якщо хочете додати ще папку, введіть назву, якщо ні введіть stop:")
-        else:
-            await state.clear()
+        file_id = search_file_id(data["folder_choice_name"])
+
+        file_metadata = {
+            'name': folder_name,  # назва папки (вводится через телеграм)
+            'mimeType': 'application/vnd.google-apps.folder',
+            'parents': ['root' if file_id is None else file_id]
+        }
+
+        service.files().create(body=file_metadata).execute()  # створення нової пустої папки
+        await message.answer(
+            f"Папка успішно створена. Якщо хочете додати ще папку, введіть назву, якщо ні введіть stop:")
 
     except Exception as ex:
         print(ex)
@@ -231,18 +229,15 @@ async def file_delete_message(message: types.Message, state: FSMContext):
 
 @dp.message(FileState.fsm_delete)
 async def file_delete(message: types.Message, state: FSMContext):
-    if message.text != 'stop':
-        file_id = search_file_id(message.text)  #
-        service.files().delete(fileId=file_id).execute()  # видалення папки або файлу по id
+    file_id = search_file_id(message.text)  #
+    service.files().delete(fileId=file_id).execute()  # видалення папки або файлу по id
 
-        await message.answer(f"Папка успішно видалена.")
-    else:
-        await state.clear()
+    await message.answer(f"Папка успішно видалена.")
 
 
 # # ------------------------------------------------------------------------------------------------------------------
 @dp.message(Command(commands="download"))  # функція завантаження, (функціонал у розробці)
-async def download_file(message: types.Message, state: FSMContext):
+async def download_message(message: types.Message, state: FSMContext):
     await message.answer(f"Введіть назву файлу, який бажаете завантажити:")
     await state.set_state(FileState.fsm_download)
 
@@ -252,14 +247,13 @@ async def download(message: types.Message, state: FSMContext):
     try:
         file_name = message.text
         file_id = search_file_id(file_name)
+        abs_path = f"{CACHE_FOLDER_NAME}\\{file_name}"
 
         request = service.files().get_media(fileId=file_id)
-
         file = io.BytesIO()
         downloader = MediaIoBaseDownload(fd=file, request=request)
-        abs_path = f"{CACHE_FOLDER_NAME}\\{file_name}"
-        done = False
 
+        done = False
         while not done:
             status, done = downloader.next_chunk()
             await message.answer(f'Download...')
@@ -267,14 +261,17 @@ async def download(message: types.Message, state: FSMContext):
         file.seek(0)
         with open(abs_path, "wb") as new_file:
             new_file.write(file.read())
-            new_file.close()
+            file.close()
 
+        cache_file = FSInputFile(abs_path, filename=file_name)
+        await bot.send_document(message.chat.id, document=cache_file)
 
-        await message.answer(file_name)
-        await message.answer_document(InputFile(abs_path))
+        os.remove(abs_path)
+
     except Exception as error:
         await message.answer(F' {error}')
-        file = None
+    finally:
+        await state.clear()
 
 
 #
