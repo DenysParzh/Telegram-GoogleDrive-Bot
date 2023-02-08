@@ -1,11 +1,13 @@
 import asyncio
 import logging
 import os
-
+import io
 from aiogram import types, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from googleapiclient.http import MediaFileUpload
+from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
+
+from aiogram.types import InputFile
 
 from FSM import FileState
 from Google import Create_Service
@@ -75,6 +77,7 @@ async def upload_folder_name(message: types.Message, state: FSMContext):
     folder_id = search_file_id(message.text)
     await state.update_data(folder_id=folder_id)
     await message.answer("⬇️ Надішліть файл/файли для завантаження ⬇️")
+    await message.answer("Якщо хочете припинити завантажувати файли введіть stop")
     await state.set_state(FileState.fsm_upload)
 
 
@@ -157,91 +160,123 @@ async def upload_video_node(message: types.Message, state: FSMContext):
     await upload_file(video_note_name, mime_type, folder_id, video_note_id)
 
 
+@dp.message(FileState.fsm_upload, F.animation)
+async def upload_audio(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    folder_id = data["folder_id"]
+
+    animation_name = message.animation.file_name
+    mime_type = message.animation.mime_type
+    animation_id = message.animation.file_id
+
+    await upload_file(animation_name, mime_type, folder_id, animation_id)
+
+
+@dp.message(FileState.fsm_upload, F.text)
+async def upload_video_node(message: types.Message, state: FSMContext):
+    if message.text == 'stop':
+        await state.clear()
+
+
 # ------------------------------------------------------------------------------------------------------------------
-# @dp.message(commands="create_folder", state=None)  # функція створення папки
-# async def process_create_folder(message: types.Message):
-#     await message.answer(f"Введіть назву папки:")
-#     await FileState.fsm_create_folder.set()  # стан очікування назви створеної папки
-#
-#
-# @dp.message(state=FileState.fsm_create_folder)  # функція стану очікування назви створеної папки
-# async def create_folder(message: types.Message, state: FSMContext):
-#     name_folder = message.text
-#     async with state.proxy() as data:
-#         data['name_folder'] = name_folder
-#     await message.answer(
-#         f"Введіть назву папки у якій хочете створити папку, або напищіть root,щоб створення відбулося в корінній папці:")
-#     await FileState.fsm_choice_create_folder.set()
-#
-#
-# @dp.message(state=FileState.fsm_choice_create_folder)  # функція стану очікування назви створеної папки
-# async def create_folder(message: types.Message, state: FSMContext):
-#     try:
-#         file_id = search_file_id(message.text)
-#         async with state.proxy() as data:
-#             name_folder = data['name_folder']
-#
-#         file_metadata = {
-#             'name': name_folder,  # назва папки (вводится через телеграм)
-#             'mimeType': 'application/vnd.google-apps.folder',
-#             'parents': ['root' if file_id is None else file_id]
-#         }
-#         service.files().create(body=file_metadata).execute()  # створення нової пустої папки
-#         await message.answer(f"Папка успішно створена.")
-#         await state.finish()
-#     except Exception as ex:
-#         print(ex)
-#
-#
-# # ------------------------------------------------------------------------------------------------------------------
-# @dp.message(commands="delete_folder", state=None)  # функція видалення папки або файлу по id
-# async def file_delete_message(message: types.Message):
-#     await message.answer(f"Введіть назву файлу для видалення:")
-#     await FileState.fsm_delete.set()
-#
-#
-# @dp.message(state=FileState.fsm_delete)
-# async def file_delete(message: types.Message, state: FSMContext):
-#     file_id = search_file_id(message.text)  #
-#     service.files().delete(fileId=file_id).execute()  # видалення папки або файлу по id
-#
-#     await message.answer(f"Папка успішно видалена.")
-#     await state.finish()
-#
+@dp.message(Command(commands="create"))  # функція створення папки
+async def process_create_folder(message: types.Message, state: FSMContext):
+    await message.answer(
+        f"Введіть назву папки у якій хочете створити папку, або напищіть root,щоб створення відбулося в корінній папці:")
+    await state.set_state(FileState.fsm_create_folder)  # стан очікування назви створеної папки
+
+
+@dp.message(FileState.fsm_create_folder)  # функція стану очікування назви створеної папки
+async def create_folder(message: types.Message, state: FSMContext):
+    folder_choice_name = message.text
+    await state.update_data(folder_choice_name=folder_choice_name)
+
+    await message.answer(f"Введіть назву папки:")
+    await state.set_state(FileState.fsm_choice_create_folder)
+
+
+@dp.message(FileState.fsm_choice_create_folder)  # функція стану очікування назви створеної папки
+async def create_folder(message: types.Message, state: FSMContext):
+    try:
+
+        folder_name = message.text
+        if folder_name != 'stop':
+            data = await state.get_data()
+
+            file_id = search_file_id(data["folder_choice_name"])
+
+            file_metadata = {
+                'name': folder_name,  # назва папки (вводится через телеграм)
+                'mimeType': 'application/vnd.google-apps.folder',
+                'parents': ['root' if file_id is None else file_id]
+            }
+            service.files().create(body=file_metadata).execute()  # створення нової пустої папки
+            await message.answer(
+                f"Папка успішно створена. Якщо хочете додати ще папку, введіть назву, якщо ні введіть stop:")
+        else:
+            await state.clear()
+
+    except Exception as ex:
+        print(ex)
+
+
 #
 # # ------------------------------------------------------------------------------------------------------------------
-# @dp.message(commands="download", state=None)  # функція завантаження, (функціонал у розробці)
-# async def download_file(message: types.Message):
-#     await message.answer(f"Введіть назву файлу, який бажаете завантажити:")
-#     await FileState.fsm_download.set()
-#
-#
-# @dp.message(state=FileState.fsm_download)
-# async def download(message: types.Message, state: FSMContext):
-#     file_name = message.text
-#     file_id = search_file_id(file_name)
-#
-#     request = service.files().get_media(fileId=file_id)
-#
-#     fh = io.BytesIO()
-#     downloader = MediaIoBaseDownload(fd=fh, request=request)
-#
-#     done = False
-#
-#     while not done:
-#         status, done = downloader.next_chunk()
-#         await message.answer(f'Download progress...')
-#     fh.seek(0)
-#     with open(os.path.join('D:/', file_name), 'wb') as f:
-#         f.write(fh.read())
-#         f.close()
-#
-#     await message.reply_document(open(os.path.join('D:/'+ file_name), 'rb'))
-#     await message.answer(f"Файл завантажен.")
-#     path = os.path.join('D:/', file_name)
-#     os.remove(path)
-#     await state.finish()
-#
+@dp.message(Command(commands="delete"))  # функція видалення папки або файлу по id
+async def file_delete_message(message: types.Message, state: FSMContext):
+    await message.answer(f"Введіть назву файлу для видалення:")
+    await message.answer("Якщо хочете зупинити виделення введіть \stop:")
+    await state.set_state(FileState.fsm_delete)
+
+
+@dp.message(FileState.fsm_delete)
+async def file_delete(message: types.Message, state: FSMContext):
+    if message.text != 'stop':
+        file_id = search_file_id(message.text)  #
+        service.files().delete(fileId=file_id).execute()  # видалення папки або файлу по id
+
+        await message.answer(f"Папка успішно видалена.")
+    else:
+        await state.clear()
+
+
+# # ------------------------------------------------------------------------------------------------------------------
+@dp.message(Command(commands="download"))  # функція завантаження, (функціонал у розробці)
+async def download_file(message: types.Message, state: FSMContext):
+    await message.answer(f"Введіть назву файлу, який бажаете завантажити:")
+    await state.set_state(FileState.fsm_download)
+
+
+@dp.message(FileState.fsm_download)
+async def download(message: types.Message, state: FSMContext):
+    try:
+        file_name = message.text
+        file_id = search_file_id(file_name)
+
+        request = service.files().get_media(fileId=file_id)
+
+        file = io.BytesIO()
+        downloader = MediaIoBaseDownload(fd=file, request=request)
+        abs_path = f"{CACHE_FOLDER_NAME}\\{file_name}"
+        done = False
+
+        while not done:
+            status, done = downloader.next_chunk()
+            await message.answer(f'Download...')
+
+        file.seek(0)
+        with open(abs_path, "wb") as new_file:
+            new_file.write(file.read())
+            new_file.close()
+
+
+        await message.answer(file_name)
+        await message.answer_document(InputFile(abs_path))
+    except Exception as error:
+        await message.answer(F' {error}')
+        file = None
+
+
 #
 # # ------------------------------------------------------------------------------------------------------------------
 # @dp.message(commands="info", state=None)  # функція завантаження, (функціонал у розробці)
