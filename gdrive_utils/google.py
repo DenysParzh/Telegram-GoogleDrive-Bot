@@ -1,19 +1,17 @@
-import pickle
 import os
-from google_auth_oauthlib.flow import InstalledAppFlow
+import pickle
 from googleapiclient.discovery import build
 from google.auth.transport.requests import Request
+from google_auth_oauthlib.flow import InstalledAppFlow
 
 
-def Create_Service(client_secret_file, api_name, api_version, *scopes):
-
+def create_service(client_secret_file, api_name, api_version, *scopes):
     CLIENT_SECRET_FILE = client_secret_file
     API_SERVICE_NAME = api_name
     API_VERSION = api_version
     SCOPES = [scope for scope in scopes[0]]
 
     cred = None
-
     pickle_file = f'token_{API_SERVICE_NAME}_{API_VERSION}.pickle'
 
     if os.path.exists(pickle_file):
