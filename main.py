@@ -14,6 +14,8 @@ from Google import Create_Service
 from constants import CLIENT_SECRET_FILE, API_NAME, API_VERSION, SCOPES, CACHE_FOLDER_NAME
 from loader import bot, dp, google_auth
 
+from keyboards.reply import button_stop
+
 service = Create_Service(CLIENT_SECRET_FILE, API_NAME, API_VERSION, SCOPES)
 logging.basicConfig(level=logging.INFO)
 
@@ -77,7 +79,7 @@ async def upload_folder_name(message: types.Message, state: FSMContext):
     folder_id = search_file_id(message.text)
     await state.update_data(folder_id=folder_id)
     await message.answer("⬇️ Надішліть файл/файли для завантаження ⬇️")
-    await message.answer("Якщо хочете припинити завантажувати файли введіть stop")
+    await message.answer("Якщо хочете припинити завантажувати файли введіть stop", reply_markup=button_stop)
     await state.set_state(FileState.fsm_upload)
 
 
@@ -181,7 +183,8 @@ async def upload_video_node(message: types.Message, state: FSMContext):
 @dp.message(Command(commands="create"))  # функція створення папки
 async def process_create_folder(message: types.Message, state: FSMContext):
     await message.answer(
-        f"Введіть назву папки у якій хочете створити папку, або напищіть root,щоб створення відбулося в корінній папці:")
+        f"Введіть назву папки у якій хочете створити папку, або напищіть root,щоб створення відбулося в корінній папці:",
+        reply_markup=button_stop)
     await state.set_state(FileState.fsm_create_folder)  # стан очікування назви створеної папки
 
 
@@ -223,7 +226,7 @@ async def create_folder(message: types.Message, state: FSMContext):
 @dp.message(Command(commands="delete"))  # функція видалення папки або файлу по id
 async def file_delete_message(message: types.Message, state: FSMContext):
     await message.answer(f"Введіть назву файлу для видалення:")
-    await message.answer("Якщо хочете зупинити виделення введіть \stop:")
+    await message.answer("Якщо хочете зупинити виделення введіть \stop:", reply_markup=button_stop)
     await state.set_state(FileState.fsm_delete)
 
 
@@ -245,6 +248,7 @@ async def download_message(message: types.Message, state: FSMContext):
 @dp.message(FileState.fsm_download)
 async def download(message: types.Message, state: FSMContext):
     try:
+        await message.answer(reply_markup=button_stop)
         file_name = message.text
         file_id = search_file_id(file_name)
         abs_path = f"{CACHE_FOLDER_NAME}\\{file_name}"
