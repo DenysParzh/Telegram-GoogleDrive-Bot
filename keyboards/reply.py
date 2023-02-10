@@ -1,4 +1,3 @@
-from aiogram.types import ReplyKeyboardRemove, KeyboardButtonPollType, ReplyKeyboardMarkup, KeyboardButton
 from aiogram import types
 
 kb = [

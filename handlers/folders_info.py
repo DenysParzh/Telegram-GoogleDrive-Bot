@@ -1,7 +1,8 @@
-from aiogram import types, Router, F
+from aiogram import types, Router
 from aiogram.filters import Command
-from gdrive_utils.scripts import search_file_id, Fileinfo, create_inline_button_for_info
-
+from gdrive.scripts import search_file_id
+from utils.callbackdata import Fileinfo
+from keyboards.inline import create_inline_button_for_info
 
 router = Router()
 

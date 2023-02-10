@@ -6,9 +6,9 @@ from aiogram.fsm.context import FSMContext
 
 from keyboards.reply import button_stop
 from loader import bot
-from FSM import FileState
-from constants import CACHE_FOLDER_NAME
-from gdrive_utils.scripts import search_file_id, upload_file
+from utils.FSM import FileState
+from utils.constants import CACHE_FOLDER_NAME
+from gdrive.scripts import search_file_id, upload_file
 
 router = Router()
 

@@ -1,17 +1,13 @@
 import os
-import io
 
 from aiogram import types, Router, F
 from aiogram.filters import Command
-from aiogram.fsm.context import FSMContext
-from googleapiclient.http import MediaIoBaseDownload
-from aiogram.types import FSInputFile
 
-from FSM import FileState
-from keyboards.reply import button_stop
-from loader import bot, service
-from constants import CACHE_FOLDER_NAME, MIME_TYPE_FOLDER
-from gdrive_utils.scripts import search_file_id, create_inline_button, DownloadFile
+from loader import bot
+from utils.callbackdata import DownloadFile
+from utils.constants import MIME_TYPE_FOLDER
+from keyboards.inline import create_inline_button
+from gdrive.scripts import search_file_id, download
 
 router = Router()
 
@@ -23,32 +19,6 @@ async def download_message(message: types.Message):
         "Папки:",
         reply_markup=create_inline_button(folder_id="root")
     )
-
-
-def download(file_name):
-    try:
-        file_id = search_file_id(file_name)
-        abs_path = f"{CACHE_FOLDER_NAME}\\{file_name}"
-
-        request = service.files().get_media(fileId=file_id)
-        file = io.BytesIO()
-        downloader = MediaIoBaseDownload(fd=file, request=request)
-
-        done = False
-        while not done:
-            status, done = downloader.next_chunk()
-
-        file.seek(0)
-        with open(abs_path, "wb") as new_file:
-            new_file.write(file.read())
-            file.close()
-
-        cache_file = FSInputFile(abs_path, filename=file_name)
-
-        return cache_file, abs_path
-
-    except Exception as error:
-        print(F'{error}')
 
 
 @router.callback_query(DownloadFile.filter(F.mime_type == MIME_TYPE_FOLDER))
@@ -68,6 +38,7 @@ async def send_value(query: types.CallbackQuery, callback_data: DownloadFile):
 async def send_value(query: types.CallbackQuery, callback_data: DownloadFile):
     file_name = callback_data.file_name
     downloaded_file, abs_path = download(file_name)
+
     await bot.send_document(query.message.chat.id, document=downloaded_file)
     os.remove(abs_path)
 
