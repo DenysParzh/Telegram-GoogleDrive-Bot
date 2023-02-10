@@ -34,9 +34,13 @@ async def upload_file(file_name, mimeType, folder_id, file_id):
     os.remove(abs_path)
 
 
-class FileInfo(CallbackData, prefix="file"):
+class DownloadFile(CallbackData, prefix="file"):
     file_name: str
     mime_type: str
+
+
+class Fileinfo(CallbackData, prefix="info"):
+    name: str
 
 
 def validate_mime_type(mime_type: str) -> str:
@@ -48,12 +52,25 @@ def create_inline_button(folder_id="root"):
     builder = InlineKeyboardBuilder()
 
     for file in response["files"]:
-        #pp.pprint(file["mimeType"])
         builder.button(text=file['name'],
-                       callback_data=FileInfo(file_name=file["name"],
-                                              mime_type=validate_mime_type(file["mimeType"])).pack())
+                       callback_data=DownloadFile(file_name=file["name"],
+                                                  mime_type=validate_mime_type(file["mimeType"])).pack())
 
     builder.button(text='Назад', callback_data="root")
+
+    builder.adjust(3)
+    return builder.as_markup()
+
+
+def create_inline_button_for_info(folder_id="root"):
+    response = service.files().list(q=f"parents='{folder_id}'").execute()
+    builder = InlineKeyboardBuilder()
+
+    for file in response["files"]:
+        builder.button(text=file['name'],
+                       callback_data=Fileinfo(name=file["name"]).pack())
+
+    builder.button(text='Назад', callback_data=Fileinfo(name="back").pack())
 
     builder.adjust(3)
     return builder.as_markup()
