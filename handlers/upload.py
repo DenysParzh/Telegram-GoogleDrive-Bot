@@ -4,6 +4,7 @@ from aiogram import types, F, Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 
+from keyboards.reply import button_stop
 from loader import bot
 from FSM import FileState
 from constants import CACHE_FOLDER_NAME
@@ -14,7 +15,7 @@ router = Router()
 
 @router.message(Command(commands='upload'))
 async def upload_message(message: types.Message, state: FSMContext):
-    await message.answer("⬇️ Введіть назву папки на Google Drive ⬇️")
+    await message.answer("⬇️ Введіть назву папки на Google Drive ⬇️", reply_markup=button_stop)
     await state.set_state(FileState.fsm_upload_folder_name)
 
 
@@ -23,7 +24,8 @@ async def upload_folder_name(message: types.Message, state: FSMContext):
     folder_id = search_file_id(message.text)
     await state.update_data(folder_id=folder_id)
     await message.answer("⬇️ Надішліть файл/файли для завантаження ⬇️")
-    await message.answer("Якщо хочете припинити завантажувати файли введіть stop")  # reply_markup=button_stop
+    await message.answer("Якщо хочете припинити завантажувати файли введіть stop"
+                         )  # reply_markup=button_stop
     await state.set_state(FileState.fsm_upload)
 
 
