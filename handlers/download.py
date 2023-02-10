@@ -8,6 +8,7 @@ from googleapiclient.http import MediaIoBaseDownload
 from aiogram.types import FSInputFile
 
 from FSM import FileState
+from keyboards.reply import button_stop
 from loader import bot, service
 from constants import CACHE_FOLDER_NAME
 from gdrive_utils.scripts import search_file_id
@@ -18,14 +19,14 @@ router = Router()
 # функція завантаження
 @router.message(Command(commands="download"))
 async def download_message(message: types.Message, state: FSMContext):
-    await message.answer(f"Введіть назву файлу, який бажаете завантажити:")
+    await message.answer(f"Введіть назву файлу, який бажаете завантажити:", reply_markup=button_stop)
     await state.set_state(FileState.fsm_download)
 
 
 @router.message(FileState.fsm_download)
 async def download(message: types.Message, state: FSMContext):
     try:
-        # await message.answer(reply_markup=button_stop)
+
         file_name = message.text
         file_id = search_file_id(file_name)
         abs_path = f"{CACHE_FOLDER_NAME}\\{file_name}"

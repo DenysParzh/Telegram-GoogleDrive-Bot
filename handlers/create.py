@@ -3,6 +3,7 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 
 from FSM import FileState
+from keyboards.reply import button_stop
 from loader import dp, service
 from gdrive_utils.scripts import search_file_id
 
@@ -13,6 +14,7 @@ router = Router()
 async def process_create_folder(message: types.Message, state: FSMContext):
     await message.answer(
         f"Введіть назву папки у якій хочете створити папку, або напищіть root,щоб створення відбулося в корінній папці:",
+        reply_markup=button_stop
     )  # reply_markup=button_stop
     await state.set_state(FileState.fsm_create_folder)  # стан очікування назви створеної папки
 

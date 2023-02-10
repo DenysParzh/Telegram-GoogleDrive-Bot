@@ -1,4 +1,6 @@
 import os
+
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 from googleapiclient.http import MediaFileUpload
 from constants import CACHE_FOLDER_NAME
 from loader import bot, service
@@ -27,3 +29,17 @@ async def upload_file(file_name, mimeType, folder_id, file_id):
 
     media.__del__()
     os.remove(abs_path)
+
+
+def create_inline_button(folder_id="root"):
+    response = service.files().list(q=f"parents='{folder_id}'").execute()
+    builder = InlineKeyboardBuilder()
+
+    for index, value in enumerate(response["files"]):
+        builder.button(text=response["files"][index]['name'],
+                       callback_data=response["files"][index]['name'])
+
+    builder.button(text='Назад', callback_data="root")
+
+    builder.adjust(3)
+    return builder.as_markup()
