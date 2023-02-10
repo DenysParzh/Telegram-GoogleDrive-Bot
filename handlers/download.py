@@ -11,7 +11,7 @@ from FSM import FileState
 from keyboards.reply import button_stop
 from loader import bot, service
 from constants import CACHE_FOLDER_NAME, MIME_TYPE_FOLDER
-from gdrive_utils.scripts import search_file_id, create_inline_button, FileInfo
+from gdrive_utils.scripts import search_file_id, create_inline_button, DownloadFile
 
 router = Router()
 
@@ -51,9 +51,8 @@ def download(file_name):
         print(F'{error}')
 
 
-@router.callback_query(FileInfo.filter(F.mime_type == MIME_TYPE_FOLDER))
-async def send_value(query: types.CallbackQuery, callback_data: FileInfo):
-
+@router.callback_query(DownloadFile.filter(F.mime_type == MIME_TYPE_FOLDER))
+async def send_value(query: types.CallbackQuery, callback_data: DownloadFile):
     folder_name = callback_data.file_name
     folder_id = search_file_id(folder_name)
 
@@ -65,8 +64,8 @@ async def send_value(query: types.CallbackQuery, callback_data: FileInfo):
     )
 
 
-@router.callback_query(FileInfo.filter(F.mime_type == "file"))
-async def send_value(query: types.CallbackQuery, callback_data: FileInfo):
+@router.callback_query(DownloadFile.filter(F.mime_type == "file"))
+async def send_value(query: types.CallbackQuery, callback_data: DownloadFile):
     file_name = callback_data.file_name
     downloaded_file, abs_path = download(file_name)
     await bot.send_document(query.message.chat.id, document=downloaded_file)
