@@ -1,9 +1,12 @@
 import os
 
-from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.utils.keyboard import InlineKeyboardBuilder, CallbackData
 from googleapiclient.http import MediaFileUpload
-from constants import CACHE_FOLDER_NAME
+from constants import CACHE_FOLDER_NAME, MIME_TYPE_FOLDER
 from loader import bot, service
+import pprint
+
+pp = pprint.PrettyPrinter(indent=4)
 
 
 def search_file_id(file_name):
@@ -31,13 +34,24 @@ async def upload_file(file_name, mimeType, folder_id, file_id):
     os.remove(abs_path)
 
 
+class FileInfo(CallbackData, prefix="file"):
+    file_name: str
+    mime_type: str
+
+
+def validate_mime_type(mime_type: str) -> str:
+    return "file" if mime_type != MIME_TYPE_FOLDER else mime_type
+
+
 def create_inline_button(folder_id="root"):
     response = service.files().list(q=f"parents='{folder_id}'").execute()
     builder = InlineKeyboardBuilder()
 
-    for index, value in enumerate(response["files"]):
-        builder.button(text=response["files"][index]['name'],
-                       callback_data=response["files"][index]['name'])
+    for file in response["files"]:
+        #pp.pprint(file["mimeType"])
+        builder.button(text=file['name'],
+                       callback_data=FileInfo(file_name=file["name"],
+                                              mime_type=validate_mime_type(file["mimeType"])).pack())
 
     builder.button(text='Назад', callback_data="root")
 
