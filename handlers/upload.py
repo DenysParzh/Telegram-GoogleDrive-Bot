@@ -1,13 +1,10 @@
-import os
-
 from aiogram import types, F, Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 
-from keyboards.reply import button_stop
 from loader import bot
 from utils.FSM import FileState
-from utils.constants import CACHE_FOLDER_NAME
+from keyboards.reply import button_stop
 from gdrive.scripts import search_file_id, upload_file
 
 router = Router()
@@ -31,9 +28,6 @@ async def upload_folder_name(message: types.Message, state: FSMContext):
 
 @router.message(FileState.fsm_upload, F.document)
 async def upload_document(message: types.Message, state: FSMContext):
-    if not os.path.exists(CACHE_FOLDER_NAME):
-        os.mkdir(CACHE_FOLDER_NAME)
-
     data = await state.get_data()
     folder_id = data["folder_id"]
 
@@ -76,8 +70,6 @@ async def upload_voice(message: types.Message, state: FSMContext):
     voice_id = message.voice.file_id
     voice_info = await bot.get_file(voice_id)
     voice_name = voice_info.file_path.split('/')[-1]
-
-    voice_id = message.voice.file_id
     mime_type = message.voice.mime_type
 
     await upload_file(voice_name, mime_type, folder_id, voice_id)

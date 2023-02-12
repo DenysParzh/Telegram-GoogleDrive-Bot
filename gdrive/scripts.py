@@ -36,8 +36,8 @@ def download(file_name):  # перевірити на async
         file_id = search_file_id(file_name)
         abs_path = f"{CACHE_FOLDER_NAME}\\{file_name}"
 
-        request = service.files().get_media(fileId=file_id)
         file = io.BytesIO()
+        request = service.files().get_media(fileId=file_id)
         downloader = MediaIoBaseDownload(fd=file, request=request)
 
         done = False
@@ -47,9 +47,9 @@ def download(file_name):  # перевірити на async
         file.seek(0)
         with open(abs_path, "wb") as new_file:
             new_file.write(file.read())
-            file.close()
 
         cache_file = FSInputFile(abs_path, filename=file_name)
+        file.close()
 
         return cache_file, abs_path
 

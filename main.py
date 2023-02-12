@@ -1,3 +1,4 @@
+import os
 import asyncio
 import logging
 
@@ -5,8 +6,9 @@ from aiogram import types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 
-from loader import bot, dp
 import handlers
+from loader import bot, dp
+from utils.constants import CACHE_FOLDER_NAME
 
 logging.basicConfig(level=logging.INFO)
 
@@ -18,6 +20,9 @@ async def stop_states(message: types.Message, state: FSMContext):
 
 async def main():
     try:
+        if not os.path.exists(CACHE_FOLDER_NAME):
+            os.mkdir(CACHE_FOLDER_NAME)
+
         await bot.delete_webhook(drop_pending_updates=True)
         dp.include_router(handlers.start.router)
         dp.include_router(handlers.login.router)
