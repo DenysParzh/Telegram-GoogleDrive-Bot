@@ -1,4 +1,5 @@
 /.idea
+/client_secrets.json
 
 ### Python template
 # Byte-compiled / optimized / DLL files
@@ -125,9 +126,8 @@ celerybeat.pid
 # Environments
 .env
 .venv
-env/
+.env/
 venv/
-ENV/
 env.bak/
 venv.bak/
 
