@@ -16,4 +16,4 @@ dp = Dispatcher(storage=storage)
 
 google_auth = GoogleAuth()
 drive = GoogleDrive(google_auth)
-service = create_service(CLIENT_SECRET_FILE, API_NAME, API_VERSION, SCOPES)
+service = None #create_service(CLIENT_SECRET_FILE, API_NAME, API_VERSION, SCOPES)
