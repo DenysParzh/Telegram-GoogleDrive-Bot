@@ -9,3 +9,5 @@ class FileState(StatesGroup):
     fsm_choice_create_folder = State()
     fsm_delete = State()
     fsm_download = State()
+
+    fsm_auth = State()
