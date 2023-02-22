@@ -18,20 +18,21 @@ def search_file_id(file_name): # перевірити на async
 
 async def upload_file(file_name, mimeType, folder_id, file_id):
     abs_path = f"{CACHE_FOLDER_NAME}\\{file_name}"
+    await bot.download(file_id, abs_path)
+
     file_metadata = {
         'name': f"{file_name}",
         'parents': ['root' if folder_id is None else folder_id]
     }
 
-    await bot.download(file_id, abs_path)
     media = MediaFileUpload(abs_path, mimetype=mimeType)
     service.files().create(body=file_metadata, media_body=media, fields='id').execute()
-
     media.__del__()
+
     os.remove(abs_path)
 
 
-def download(file_name):  # перевірити на async
+def download(file_name):
     try:
         file_id = search_file_id(file_name)
         abs_path = f"{CACHE_FOLDER_NAME}\\{file_name}"

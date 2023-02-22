@@ -4,7 +4,7 @@ import pickle
 from sqlalchemy import create_engine, Column, LargeBinary
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 from sqlalchemy.sql.sqltypes import BigInteger
-from .session import session_create
+from gdrive.sql_helper.session import session_create
 
 
 # from session import DATABASE_URL
@@ -19,17 +19,16 @@ class GDriveCreds(Base):
     credential_string = Column(LargeBinary)
 
 
-async def set_cred(user_id, cred):
+async def set_creds(user_id, cred):
     my_session = session_create()
+
     saved_cred = my_session.query(GDriveCreds).get(user_id)
     if not saved_cred:
         saved_cred = GDriveCreds(user_id=user_id)
-
-    # saved_cred = GDriveCreds(user_id=user_id, credential_string=pickle.dumps(cred))
     saved_cred.credential_string = pickle.dumps(cred)
-    my_session.add(saved_cred)  # добавляем в бд
-    my_session.commit()  # сохраняем изменения
-    my_session.refresh(saved_cred)
+
+    my_session.add(saved_cred)      # додаємо дані у БД
+    my_session.commit()             # зберігаємо
 
 
 def get_creds(chat_id):
