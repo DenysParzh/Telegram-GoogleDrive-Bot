@@ -5,7 +5,6 @@ from aiogram.fsm.context import FSMContext
 from utils.FSM import FileState
 from gdrive.google import GoogleDrive
 from keyboards.reply import button_stop
-from gdrive.scripts import search_file_id
 
 router = Router()
 
@@ -24,7 +23,7 @@ async def create_folder(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
     user_data = GoogleDrive(user_id)
     parent_folder_name = message.text
-    parent_folder_id = user_data.search_file_id(parent_folder_name)
+    parent_folder_id = user_data.search_id(parent_folder_name)
 
     await state.update_data(user_data=user_data,
                             parent_folder_id=parent_folder_id)

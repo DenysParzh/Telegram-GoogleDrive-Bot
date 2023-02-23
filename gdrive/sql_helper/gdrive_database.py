@@ -1,4 +1,3 @@
-import os
 import pickle
 
 from sqlalchemy import create_engine, Column, LargeBinary
@@ -6,8 +5,7 @@ from sqlalchemy.orm import DeclarativeBase, sessionmaker
 from sqlalchemy.sql.sqltypes import BigInteger
 from gdrive.sql_helper.session import session_create
 
-
-# from session import DATABASE_URL
+from config import DATABASE_URL
 
 
 class Base(DeclarativeBase): pass
@@ -19,7 +17,7 @@ class GDriveCreds(Base):
     credential_string = Column(LargeBinary)
 
 
-async def set_creds(user_id, cred):
+def set_creds(user_id, cred):
     my_session = session_create()
 
     saved_cred = my_session.query(GDriveCreds).get(user_id)
@@ -43,7 +41,7 @@ def get_creds(chat_id):
 
 # Для створення талиць у БД запустіть файл, як "main"
 if __name__ == "__main__":
-    engine = create_engine(os.environ["DATABASE_URL"], echo=True)
+    engine = create_engine(DATABASE_URL, echo=True)
     create_table_session = sessionmaker(bind=engine, autoflush=False)()
     Base.metadata.create_all(engine)
     create_table_session.commit()

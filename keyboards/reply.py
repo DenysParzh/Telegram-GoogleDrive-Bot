@@ -1,10 +1,6 @@
 from aiogram import types
 
-kb = [
-    [
-        types.KeyboardButton(text="/stop 🛑"),
-    ],
-]
+kb = [ [ types.KeyboardButton(text="🛑 stop 🛑"), ] ]
 button_stop = types.ReplyKeyboardMarkup(
     keyboard=kb,
     resize_keyboard=True,

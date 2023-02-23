@@ -2,18 +2,17 @@ import os
 import asyncio
 import logging
 
-from aiogram import types
-from aiogram.filters import Command
+from aiogram import types, F
 from aiogram.fsm.context import FSMContext
 
 import handlers
 from loader import bot, dp
-from utils.constants import CACHE_FOLDER_NAME
+from config import CACHE_FOLDER_NAME
 
 logging.basicConfig(level=logging.INFO)
 
 
-@dp.message(Command(commands='stop'))
+@dp.message(F.text == "🛑 stop 🛑")
 async def stop_states(message: types.Message, state: FSMContext):
     await state.clear()
 

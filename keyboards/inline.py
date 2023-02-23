@@ -1,12 +1,12 @@
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from loader import service
+from gdrive.google import GoogleDrive
 from utils.helpers import check_folder
 from utils.callbackdata import DownloadFile, Fileinfo
 
 
-def create_inline_button(folder_id="root"):
-    response = service.files().list(q=f"parents='{folder_id}'").execute()
+def create_inline_button(user_id, folder_id="root"):
+    response = GoogleDrive(user_id).get_files_list(folder_id)
     builder = InlineKeyboardBuilder()
 
     for file in response["files"]:
@@ -15,20 +15,20 @@ def create_inline_button(folder_id="root"):
                                                   mime_type=check_folder(file["mimeType"])).pack())
 
     builder.button(text='Назад', callback_data="root")
-
     builder.adjust(3)
     return builder.as_markup()
 
 
 def create_inline_button_for_info(folder_id="root"):
-    response = service.files().list(q=f"parents='{folder_id}'").execute()
-    builder = InlineKeyboardBuilder()
-
-    for file in response["files"]:
-        builder.button(text=file['name'],
-                       callback_data=Fileinfo(name=file["name"]).pack())
-
-    builder.button(text='Назад', callback_data=Fileinfo(name="back").pack())
-
-    builder.adjust(3)
-    return builder.as_markup()
+    # response = service.files().list(q=f"parents='{folder_id}'").execute()
+    # builder = InlineKeyboardBuilder()
+    #
+    # for file in response["files"]:
+    #     builder.button(text=file['name'],
+    #                    callback_data=Fileinfo(name=file["name"]).pack())
+    #
+    # builder.button(text='Назад', callback_data=Fileinfo(name="back").pack())
+    #
+    # builder.adjust(3)
+    # return builder.as_markup()
+    pass
