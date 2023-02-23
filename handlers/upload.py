@@ -8,7 +8,7 @@ from loader import bot
 from utils.FSM import FileState
 from keyboards.reply import button_stop
 from gdrive.google import GoogleDrive
-from utils.constants import CACHE_FOLDER_NAME
+from config import CACHE_FOLDER_NAME
 
 router = Router()
 
@@ -30,7 +30,7 @@ async def upload_folder_name(message: types.Message, state: FSMContext):
     file_name = message.text
     user_id = message.from_user.id
     user_data = GoogleDrive(user_id)
-    folder_id = user_data.search_file_id(file_name)
+    folder_id = user_data.search_id(file_name)
 
     await state.update_data(folder_id=folder_id, user_data=user_data)
     await message.answer("Якщо хочете припинити завантажувати файли, натисніть stop "

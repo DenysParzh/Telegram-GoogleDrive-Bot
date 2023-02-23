@@ -2,24 +2,25 @@ from aiogram import types, Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 
-from loader import service
 from utils.FSM import FileState
 from keyboards.reply import button_stop
-from gdrive.scripts import search_file_id
+from gdrive.google import GoogleDrive
 
 router = Router()
 
 
-@router.message(Command(commands="delete"))  # функція видалення папки або файлу по id
+# функція видалення папки або файлу по id
+@router.message(Command(commands="delete"))
 async def file_delete_message(message: types.Message, state: FSMContext):
-    await message.answer("Введіть назву файлу для видалення:")
-    await message.answer("Якщо хочете зупинити виделення введіть: /stop", reply_markup=button_stop)
+    await message.answer("⬇️ Введіть назву файлу для видалення ⬇️")
+    await message.answer("Нажміть stop для зупинки", reply_markup=button_stop)
     await state.set_state(FileState.fsm_delete)
 
 
 @router.message(FileState.fsm_delete)
 async def file_delete(message: types.Message, state: FSMContext):
-    file_id = search_file_id(message.text)  #
-    service.files().delete(fileId=file_id).execute()  # видалення папки або файлу по id
+    user_id = message.from_user.id
+    file_name = message.text
+    message_for_user = GoogleDrive(user_id).delete_file(file_name)
 
-    await message.answer("Папка успішно видалена.")
+    await message.answer(f"{message_for_user}")
