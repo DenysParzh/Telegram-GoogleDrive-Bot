@@ -25,11 +25,11 @@ class GoogleDrive:
         return None
 
     @classmethod
-    def create_file_metadata(cls, file_name, mime_type, folder_id):
+    def create_metadata(cls, name, mime_type, parent_id):
         return {
-            'name': file_name,
+            'name': name,
             'mimeType': mime_type,
-            'parents': ['root' if folder_id is None else folder_id]
+            'parents': ['root' if parent_id is None else parent_id]
         }
 
     def search_file_id(self, file_name):
@@ -45,7 +45,7 @@ class GoogleDrive:
             return None
 
     def upload_file(self, file_name, mime_type, folder_id, abs_path):
-        file_metadata = self.create_file_metadata(file_name, mime_type, folder_id)
+        file_metadata = self.create_metadata(file_name, mime_type, folder_id)
 
         try:
             media = MediaFileUpload(filename=abs_path,
@@ -63,3 +63,17 @@ class GoogleDrive:
             logging.error(f"Could not find the file {abs_path}: {error}")
         except Exception as error:
             logging.error(f'An error occurred while uploading the file {file_name}: {error}')
+
+    def create_folder(self, folder_name, parent_id):
+        file_metadata = self.create_metadata(folder_name,
+                                             self.__G_DRIVE_MIME_TYPE_FOLDER,
+                                             parent_id)
+
+        try:
+            self.__service.files().create(body=file_metadata).execute()
+        except HttpError as error:
+            logging.error(f'An http-error occurred while create folder {folder_name}: {error}')
+        except Exception as error:
+            logging.error(f'An error occurred while create folder {folder_name}: {error}')
+
+
